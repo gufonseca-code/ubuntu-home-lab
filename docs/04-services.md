@@ -2,6 +2,8 @@
 
 Todos os serviços abaixo rodam como containers Docker na VM Ubuntu Server (`192.168.0.50`).
 
+> **Nota:** O Docker foi instalado via Snap e o usuário não pertence ao grupo `docker`. Por isso os comandos abaixo usam `sudo`.
+
 ## Resumo
 
 | Serviço | Porta | URL de acesso | Função |
@@ -19,9 +21,9 @@ Interface web para gerenciar o Docker (containers, imagens, volumes, redes).
 ### Instalação
 
 ```bash
-docker volume create portainer_data
+sudo docker volume create portainer_data
 
-docker run -d \
+sudo docker run -d \
   -p 8000:8000 \
   -p 9443:9443 \
   --name portainer \
@@ -42,7 +44,7 @@ Ferramenta de monitoramento de serviços com interface visual e suporte a notifi
 ### Instalação
 
 ```bash
-docker run -d \
+sudo docker run -d \
   --name uptime-kuma \
   --restart=always \
   -p 3001:3001 \
@@ -80,7 +82,7 @@ Dashboard moderno para centralizar o acesso aos serviços do laboratório.
 # Gerar chave de criptografia
 openssl rand -hex 32
 
-docker run -d \
+sudo docker run -d \
   --name homarr \
   --restart unless-stopped \
   -p 7575:7575 \
