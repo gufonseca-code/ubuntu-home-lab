@@ -80,10 +80,27 @@ No modo Sleep/Hibernação, as VMs do Hyper-V são pausadas ou interrompidas.
 
 ---
 
-## 5. Aprendizados gerais
+## 5. Docker via Snap e permissões de usuário
+
+### Contexto
+
+O Docker foi instalado com `sudo snap install docker`. Optou-se por **não** adicionar o usuário ao grupo `docker`.
+
+### Por que isso importa
+
+Quem pertence ao grupo `docker` consegue conversar diretamente com o socket do Docker sem `sudo`. Na prática, isso equivale a privilégios elevados no host, pois um container privilegiado ou mal configurado pode comprometer o sistema.
+
+Manter o uso de `sudo docker` exige autenticação/elevação explícita a cada operação administrativa, o que é mais seguro em um ambiente de aprendizado e documentação.
+
+Com a instalação via Snap, o modelo de confinamento também difere da instalação tradicional por pacotes `.deb`, reforçando a escolha de não liberar o grupo `docker` neste lab.
+
+---
+
+## 6. Aprendizados gerais
 
 - Preferir memória **fixixa** em VMs que rodam Docker
 - Documentar problemas e soluções logo após resolvê-los
 - IP estático é essencial quando se expõe vários serviços por endereço
 - External Switch oferece mais controle e previsibilidade do que o Default Switch para laboratórios
 - Ferramentas de monitoramento + alertas (Telegram) aumentam bastante a utilidade prática do lab
+- Evitar adicionar usuários ao grupo `docker` em ambientes onde se prioriza segurança e rastreabilidade de ações administrativas
