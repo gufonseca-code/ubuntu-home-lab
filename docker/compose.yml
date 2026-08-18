@@ -1,0 +1,75 @@
+name: ubuntu-home-lab
+
+services:
+
+  nginx-proxy-manager:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+
+    volumes:
+      - npm_data:/data
+      - npm_letsencrypt:/etc/letsencrypt
+
+  homarr:
+    image: ghcr.io/homarr-labs/homarr:latest
+    container_name: homarr
+    restart: unless-stopped
+
+    ports:
+      - "7575:7575"
+
+    environment:
+      SECRET_ENCRYPTION_KEY: ${SECRET_ENCRYPTION_KEY}
+      TZ: ${TZ}
+
+    volumes:
+      - homarr-appdata:/appdata
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: always
+
+    ports:
+      - "3001:3001"
+
+    volumes:
+      - uptime-kuma:/app/data
+
+    extra_hosts:
+      - "homarr.lab.local:192.168.0.50"
+      - "uptime.lab.local:192.168.0.50"
+      - "portainer.lab.local:192.168.0.50"
+      - "npm.lab.local:192.168.0.50"
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+
+    ports:
+      - "8000:8000"
+      - "9443:9443"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+volumes:
+  npm_data:
+    external: true
+  npm_letsencrypt:
+    external: true
+  homarr-appdata:
+    external: true
+  uptime-kuma:
+    external: true
+  portainer_data:
+    external: true
