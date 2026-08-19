@@ -1,62 +1,182 @@
-# Rede e IP Estático
+# Rede e Conectividade
+
+## Visão Geral
+
+A infraestrutura de rede foi projetada para fornecer acesso estável aos serviços do laboratório tanto pela rede local quanto pela rede interna do Docker.
+
+Atualmente, o ambiente utiliza:
+
+- Hyper-V com External Switch
+- Endereço IP estático para a máquina virtual
+- Docker Compose
+- Rede Docker dedicada
+- Nginx Proxy Manager como Reverse Proxy
+- Comunicação entre containers utilizando o DNS interno do Docker
+
+---
+
+# Evolução da Rede
 
 ## Situação inicial
 
-A VM foi criada inicialmente usando o **Default Switch** do Hyper-V.  
-Esse switch utiliza NAT + DHCP interno, o que fazia o IP mudar a cada reinício da VM.
+A VM foi criada utilizando o **Default Switch** do Hyper-V.
 
-Isso obrigava a atualizar manualmente os endereços de acesso do Portainer, Uptime Kuma e Homarr sempre que a máquina era reiniciada.
+Esse switch utiliza NAT e DHCP interno, fazendo com que o endereço IP fosse alterado a cada reinicialização.
 
-## Solução adotada: External Switch
+Como consequência, era necessário atualizar manualmente os endereços utilizados pelos serviços.
 
-Foi criado um **External Switch** no Hyper-V para colocar a VM na mesma rede local do computador host.
+---
 
-### Passos realizados no Hyper-V
+## Migração para External Switch
 
-1. Abriu o **Gerenciador de Switch Virtual**
-2. Criou um switch do tipo **Externo**
-3. Selecionou a placa de rede física (Wi-Fi ou Ethernet)
-4. Marcou a opção de permitir que o sistema operacional de gerenciamento compartilhasse o adaptador
-5. Associou o adaptador de rede da VM a esse novo switch
+Foi criado um **External Switch** no Hyper-V para colocar a máquina virtual na mesma rede local do computador host.
 
-Após a mudança, a VM passou a receber IP da rede local (`192.168.0.x`).
+### Configuração realizada
 
-## Configuração de IP estático (Netplan)
+1. Abertura do Gerenciador de Switch Virtual
+2. Criação de um switch do tipo **Externo**
+3. Seleção da interface física (Wi-Fi)
+4. Compartilhamento do adaptador com o host
+5. Associação da VM ao novo switch
 
-Interface utilizada: `eth0`  
-Gateway da rede: `192.168.0.1`
+Após essa alteração, a VM passou a utilizar um endereço IP da rede local.
 
-Arquivo de configuração (`/etc/netplan/00-installer-config.yaml`):
+---
 
-```yaml
-network:
-  version: 2
-  ethernets:
-    eth0:
-      dhcp4: no
-      addresses:
-        - 192.168.0.50/24
-      routes:
-        - to: default
-          via: 192.168.0.1
-      nameservers:
-        addresses:
-          - 8.8.8.8
-          - 1.1.1.1
+# Configuração de Rede
+
+## Endereço IP
+
+| Item | Valor |
+|------|-------|
+| Endereço IP | 192.168.0.50 |
+| Gateway | 192.168.0.1 |
+| Interface | eth0 |
+
+A configuração foi realizada através do Netplan.
+
+Arquivo:
+
+```text
+/etc/netplan/00-installer-config.yaml
 ```
 
-Aplicação da configuração:
+Após alterações:
 
 ```bash
 sudo netplan apply
 ```
 
-## Resultado
+---
 
-- IP fixo: **192.168.0.50**
-- Conectividade com a internet e com a rede local estável
-- Serviços acessíveis de forma consistente após reinícios
+# Resolução de Nomes
 
-## Observação sobre segurança
+Durante o desenvolvimento inicial do laboratório, foi utilizado o arquivo `hosts` para resolver os domínios locais.
 
-O endereço `192.168.0.50` é um IP **privado** (RFC 1918). Ele só é alcançável dentro da rede local e não expõe a VM diretamente à internet.
+Exemplo:
+
+```text
+192.168.0.50 homarr.lab.local
+192.168.0.50 uptime.lab.local
+192.168.0.50 portainer.lab.local
+192.168.0.50 npm.lab.local
+```
+
+Essa abordagem permitiu validar o funcionamento do Reverse Proxy antes da implantação de um servidor DNS dedicado.
+
+---
+
+# Reverse Proxy
+
+O acesso aos serviços passou a ser centralizado pelo **Nginx Proxy Manager**.
+
+Domínios configurados:
+
+| Domínio | Serviço |
+|----------|----------|
+| homarr.lab.local | Homarr |
+| uptime.lab.local | Uptime Kuma |
+| portainer.lab.local | Portainer |
+| npm.lab.local | Nginx Proxy Manager |
+
+Com essa configuração, os usuários acessam os serviços utilizando nomes amigáveis, sem precisar informar portas específicas.
+
+---
+
+# Rede Docker
+
+Todos os containers fazem parte da rede Docker criada automaticamente pelo Docker Compose.
+
+Nome da rede:
+
+```text
+ubuntu-home-lab_proxy
+```
+
+Essa rede fornece um servidor DNS interno, permitindo que os containers se comuniquem utilizando seus nomes.
+
+Exemplos:
+
+```text
+homarr:7575
+uptime-kuma:3001
+portainer:9443
+```
+
+O Nginx Proxy Manager utiliza esses nomes para encaminhar as requisições aos serviços, eliminando a dependência do endereço IP da máquina virtual na comunicação interna.
+
+---
+
+# Arquitetura Atual
+
+```text
+Cliente
+      │
+      ▼
+homarr.lab.local
+      │
+      ▼
+192.168.0.50
+      │
+      ▼
+Nginx Proxy Manager
+      │
+      ▼
+ubuntu-home-lab_proxy
+      │
+ ├── homarr
+ ├── uptime-kuma
+ └── portainer
+```
+
+---
+
+# Próximos Passos
+
+A próxima etapa da evolução da infraestrutura será a implantação de um servidor DNS local.
+
+Objetivos:
+
+- eliminar a dependência do arquivo `hosts`;
+- distribuir os domínios automaticamente para todos os dispositivos da rede;
+- simplificar a administração dos serviços.
+
+Após essa implantação, os registros DNS passarão a substituir completamente as entradas manuais atualmente utilizadas.
+
+---
+
+# Estado Atual
+
+- ✅ External Switch
+- ✅ Endereço IP estático
+- ✅ Docker Compose
+- ✅ Rede Docker dedicada
+- ✅ DNS interno do Docker
+- ✅ Reverse Proxy
+- ⏳ DNS local (planejado)
+
+---
+
+# Observação sobre Segurança
+
+O endereço `192.168.0.50` pertence ao espaço de endereços privados (RFC 1918) e está acessível apenas dentro da rede local, não expondo diretamente os serviços à Internet.
