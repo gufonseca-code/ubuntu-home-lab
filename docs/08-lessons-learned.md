@@ -1,106 +1,193 @@
-# Problemas Enfrentados e Soluções
+# Lições Aprendidas
 
-Esta seção documenta os principais problemas encontrados durante a montagem do laboratório e como foram resolvidos. É uma das partes mais úteis da documentação, pois demonstra capacidade de troubleshooting.
+Este documento reúne os principais problemas encontrados durante o desenvolvimento do laboratório, bem como as soluções adotadas e os conhecimentos adquiridos.
 
 ---
 
-## 1. Erro "out of memory" no Docker (mesmo com RAM livre)
+# Hyper-V
 
-### Sintoma
+## Default Switch
 
-Ao executar `docker run hello-world` (e outros comandos), aparecia erro de *out of memory*, apesar do comando `free -h` mostrar vários GB disponíveis.
+### Problema
 
-### Causa
+O Default Switch atribuía endereços IP dinâmicos à máquina virtual.
 
-A **Memória Dinâmica** do Hyper-V estava ativada. O gerenciamento dinâmico de memória do hipervisor interferia na forma como o Docker e o kernel Linux enxergavam a memória disponível.
+Isso dificultava o acesso aos serviços e exigia alterações frequentes na configuração do ambiente.
 
 ### Solução
 
-1. Desligar a VM
-2. Em **Configurações → Memória**:
-   - Desmarcar **Habilitar memória dinâmica**
-   - Definir RAM fixa (6 GB ou 8 GB)
-3. Ligar a VM novamente
+Foi criado um External Switch e configurado um endereço IP estático para a máquina virtual.
 
-Após essa alteração, o erro deixou de ocorrer.
+### Aprendizado
+
+Embora o Default Switch seja suficiente para testes rápidos, um laboratório permanente exige uma configuração de rede previsível.
 
 ---
 
-## 2. Instalação do Ubuntu Server reiniciando e voltando ao início
+# Docker
 
-### Sintoma
+## Docker via Snap
 
-Durante a instalação do Ubuntu Server, a VM reiniciava e voltava para a tela inicial da instalação em loop.
+### Problema
 
-### Causas possíveis e correções aplicadas
-
-- **Secure Boot** ainda ativado → desativado em Configurações → Segurança
-- ISO desconectada após o primeiro reboot → verificada e reconectada na unidade de DVD
-- Ordem de boot → Unidade de DVD priorizada no Firmware
-
-Com Secure Boot desativado e a ISO corretamente conectada, a instalação concluiu normalmente.
-
----
-
-## 3. IP mudando a cada reinício da VM
-
-### Sintoma
-
-Após reiniciar a VM, o endereço IP mudava. Era necessário atualizar manualmente os links no Homarr, Uptime Kuma e nos monitores.
-
-### Causa
-
-Uso do **Default Switch** do Hyper-V (NAT + DHCP interno).
+Inicialmente havia dúvidas sobre a utilização do Docker instalado via Snap.
 
 ### Solução
 
-1. Criação de um **External Switch** no Hyper-V
-2. Associação da VM a esse switch
-3. Configuração de IP estático via Netplan (`192.168.0.50/24`)
+Foi mantida essa instalação por apresentar boa integração com o Ubuntu Server e atender plenamente às necessidades do laboratório.
 
-Com isso, o IP permaneceu fixo após reinícios.
+### Aprendizado
 
----
-
-## 4. Suspensão do Windows interrompendo os serviços
-
-### Sintoma
-
-Quando o computador host entrava em modo de suspensão (Sleep), os serviços da VM paravam de responder.
-
-### Explicação
-
-No modo Sleep/Hibernação, as VMs do Hyper-V são pausadas ou interrompidas.
-
-### Solução / mitigação
-
-- Configurar o Windows para **nunca suspender**
-- Permitir apenas o desligamento da tela
-- (Opcional) Configurar a VM para iniciar automaticamente com o Windows
+Independentemente do método de instalação, o mais importante é compreender onde os volumes, redes e configurações são armazenados.
 
 ---
 
-## 5. Docker via Snap e permissões de usuário
+# Docker Compose
 
-### Contexto
+## Migração do docker run
 
-O Docker foi instalado com `sudo snap install docker`. Optou-se por **não** adicionar o usuário ao grupo `docker`.
+### Problema
 
-### Por que isso importa
+Todos os serviços eram criados individualmente utilizando `docker run`.
 
-Quem pertence ao grupo `docker` consegue conversar diretamente com o socket do Docker sem `sudo`. Na prática, isso equivale a privilégios elevados no host, pois um container privilegiado ou mal configurado pode comprometer o sistema.
+Isso dificultava:
 
-Manter o uso de `sudo docker` exige autenticação/elevação explícita a cada operação administrativa, o que é mais seguro em um ambiente de aprendizado e documentação.
+- reproduzir o ambiente;
+- manter as configurações;
+- documentar a infraestrutura.
 
-Com a instalação via Snap, o modelo de confinamento também difere da instalação tradicional por pacotes `.deb`, reforçando a escolha de não liberar o grupo `docker` neste lab.
+### Solução
+
+Todos os containers foram migrados para um único arquivo `compose.yml`.
+
+### Aprendizado
+
+O Docker Compose transforma a infraestrutura em código, permitindo recriar todo o ambiente de maneira simples e reproduzível.
 
 ---
 
-## 6. Aprendizados gerais
+## Conflito de nomes dos containers
 
-- Preferir memória **fixixa** em VMs que rodam Docker
-- Documentar problemas e soluções logo após resolvê-los
-- IP estático é essencial quando se expõe vários serviços por endereço
-- External Switch oferece mais controle e previsibilidade do que o Default Switch para laboratórios
-- Ferramentas de monitoramento + alertas (Telegram) aumentam bastante a utilidade prática do lab
-- Evitar adicionar usuários ao grupo `docker` em ambientes onde se prioriza segurança e rastreabilidade de ações administrativas
+### Problema
+
+Ao executar o Docker Compose pela primeira vez ocorreu um conflito porque já existiam containers criados manualmente utilizando os mesmos nomes.
+
+### Solução
+
+Os containers antigos foram removidos e a infraestrutura passou a ser gerenciada exclusivamente pelo Docker Compose.
+
+### Aprendizado
+
+Uma migração para Compose deve ser planejada para evitar conflitos entre recursos existentes e aqueles definidos no novo ambiente.
+
+---
+
+# Redes Docker
+
+## Comunicação entre containers
+
+### Problema
+
+O Nginx Proxy Manager utilizava o endereço IP da máquina virtual para acessar os serviços.
+
+```text
+192.168.0.50:7575
+```
+
+Isso criava uma dependência desnecessária do host.
+
+### Solução
+
+Foi criada uma rede Docker dedicada e o Nginx Proxy Manager passou a utilizar os nomes dos containers.
+
+Exemplo:
+
+```text
+homarr:7575
+```
+
+### Aprendizado
+
+O Docker fornece um servidor DNS interno para cada rede criada.
+
+Sempre que possível, containers devem se comunicar utilizando seus nomes em vez do endereço IP do host.
+
+---
+
+## DNS do Uptime Kuma
+
+### Problema
+
+O Uptime Kuma não conseguia resolver os domínios locais (`*.lab.local`), apesar de funcionarem normalmente no sistema operacional.
+
+### Solução
+
+Foi identificado que os containers possuem resolução de nomes independente do sistema hospedeiro.
+
+Como solução temporária, foram utilizadas entradas adicionais de resolução de nomes até a implantação de um servidor DNS dedicado.
+
+### Aprendizado
+
+A resolução de nomes dentro de containers deve ser planejada separadamente da resolução utilizada pelo sistema operacional.
+
+---
+
+# Reverse Proxy
+
+## Nginx Proxy Manager
+
+### Problema
+
+Os serviços eram acessados diretamente pelas portas expostas.
+
+Exemplo:
+
+```
+http://192.168.0.50:7575
+```
+
+### Solução
+
+Foi implantado o Nginx Proxy Manager para centralizar o acesso através de domínios locais.
+
+Exemplo:
+
+```
+http://homarr.lab.local
+```
+
+### Aprendizado
+
+O uso de um Reverse Proxy torna a infraestrutura mais organizada, facilita futuras implantações de HTTPS e reduz a exposição direta das portas dos serviços.
+
+---
+
+# Documentação
+
+## Documentar durante o desenvolvimento
+
+### Problema
+
+Conforme o laboratório evoluía, detalhes importantes começavam a ser esquecidos.
+
+### Solução
+
+Toda decisão de arquitetura passou a ser documentada imediatamente após sua implementação.
+
+### Aprendizado
+
+Documentar continuamente é mais eficiente do que tentar reconstruir o histórico do projeto posteriormente.
+
+---
+
+# Próximos Aprendizados
+
+As próximas etapas do projeto deverão introduzir novos conceitos, incluindo:
+
+- DNS local
+- HTTPS
+- Certificados SSL
+- Monitoramento de infraestrutura
+- Backup
+- Recuperação de ambiente
+- Expansão dos serviços
