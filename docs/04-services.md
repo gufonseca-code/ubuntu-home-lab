@@ -1,103 +1,154 @@
-# Serviços Instalados
+# Serviços
 
-Todos os serviços abaixo rodam como containers Docker na VM Ubuntu Server (`192.168.0.50`).
+## Visão Geral
 
-> **Nota:** O Docker foi instalado via Snap e o usuário não pertence ao grupo `docker`. Por isso os comandos abaixo usam `sudo`.
+O Ubuntu Home Lab utiliza serviços executados em containers Docker para fornecer monitoramento, gerenciamento e acesso centralizado ao ambiente.
 
-## Resumo
-
-| Serviço | Porta | URL de acesso | Função |
-|---------|-------|---------------|--------|
-| Portainer | 9443 | https://192.168.0.50:9443 | Gerenciamento visual de containers |
-| Uptime Kuma | 3001 | http://192.168.0.50:3001 | Monitoramento e alertas |
-| Homarr | 7575 | http://192.168.0.50:7575 | Dashboard central |
-
----
-
-## 1. Portainer
-
-Interface web para gerenciar o Docker (containers, imagens, volumes, redes).
-
-### Instalação
+Toda a infraestrutura é gerenciada através do **Docker Compose**, permitindo que os serviços sejam recriados de forma consistente utilizando um único comando.
 
 ```bash
-sudo docker volume create portainer_data
-
-sudo docker run -d \
-  -p 8000:8000 \
-  -p 9443:9443 \
-  --name portainer \
-  --restart=always \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v portainer_data:/data \
-  portainer/portainer-ce:latest
+sudo docker compose up -d
 ```
 
-Na primeira execução é necessário criar o usuário administrador.
+Todos os containers compartilham uma rede Docker dedicada (`ubuntu-home-lab_proxy`) e utilizam o DNS interno do Docker para comunicação.
 
 ---
 
-## 2. Uptime Kuma
+# Arquitetura dos Serviços
 
-Ferramenta de monitoramento de serviços com interface visual e suporte a notificações.
-
-### Instalação
-
-```bash
-sudo docker run -d \
-  --name uptime-kuma \
-  --restart=always \
-  -p 3001:3001 \
-  -v uptime-kuma:/app/data \
-  louislam/uptime-kuma:1
+```text
+Cliente
+      │
+      ▼
+Nginx Proxy Manager
+      │
+      ▼
+ubuntu-home-lab_proxy
+      │
+ ├── Homarr
+ ├── Uptime Kuma
+ └── Portainer
 ```
-
-### O que está sendo monitorado
-
-- Portainer (HTTPS na porta 9443)
-- Próprio Uptime Kuma
-- SSH da VM (porta 22)
-- Outros serviços conforme necessidade
-
-### Notificações
-
-Foi configurada notificação via **Telegram**:
-
-1. Criação de um bot com o @BotFather
-2. Obtenção do Bot Token e do Chat ID
-3. Cadastro da notificação no Uptime Kuma
-4. Associação da notificação aos monitores
-
-Assim, qualquer queda ou recuperação de serviço gera alerta no Telegram.
 
 ---
 
-## 3. Homarr
+# Serviços Implantados
 
-Dashboard moderno para centralizar o acesso aos serviços do laboratório.
-
-### Instalação
-
-```bash
-# Gerar chave de criptografia
-openssl rand -hex 32
-
-sudo docker run -d \
-  --name homarr \
-  --restart unless-stopped \
-  -p 7575:7575 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v homarr-appdata:/appdata \
-  -e SECRET_ENCRYPTION_KEY='SUA_CHAVE_AQUI' \
-  ghcr.io/homarr-labs/homarr:latest
-```
-
-O socket do Docker foi montado para permitir integração e visualização do status dos containers.
-
-No Homarr foram adicionados atalhos para Portainer, Uptime Kuma e o próprio Homarr.
+| Serviço | Função | Porta Interna | Domínio |
+|----------|---------|--------------:|---------|
+| Homarr | Dashboard do laboratório | 7575 | homarr.lab.local |
+| Uptime Kuma | Monitoramento | 3001 | uptime.lab.local |
+| Portainer | Gerenciamento Docker | 9443 | portainer.lab.local |
+| Nginx Proxy Manager | Reverse Proxy | 80 / 81 / 443 | npm.lab.local |
 
 ---
 
-## Política de reinício
+# Docker Compose
 
-Todos os containers principais usam `--restart=always` ou `unless-stopped`, de forma que voltem automaticamente após reinício da VM.
+Os serviços são definidos em um único arquivo:
+
+```text
+docker/compose.yml
+```
+
+A utilização do Docker Compose trouxe diversas vantagens:
+
+- implantação reproduzível;
+- configuração centralizada;
+- gerenciamento simplificado;
+- criação automática da rede Docker;
+- criação automática dos volumes persistentes.
+
+---
+
+# Rede Docker
+
+Todos os containers participam da rede:
+
+```text
+ubuntu-home-lab_proxy
+```
+
+A comunicação entre os serviços ocorre utilizando o DNS interno do Docker.
+
+Exemplos:
+
+```text
+homarr:7575
+uptime-kuma:3001
+portainer:9443
+```
+
+Essa abordagem elimina a necessidade de utilizar o endereço IP da máquina virtual na comunicação entre containers.
+
+---
+
+# Volumes Persistentes
+
+Os dados dos serviços são armazenados em volumes Docker.
+
+Exemplos:
+
+- homarr-appdata
+- uptime-kuma
+- npm_data
+- npm_letsencrypt
+- portainer_data
+
+Isso garante que os dados permaneçam preservados mesmo após recriar os containers.
+
+---
+
+# Reverse Proxy
+
+O acesso aos serviços é realizado através do Nginx Proxy Manager.
+
+Mapeamentos atuais:
+
+| Domínio | Destino |
+|----------|----------|
+| homarr.lab.local | homarr:7575 |
+| uptime.lab.local | uptime-kuma:3001 |
+| portainer.lab.local | portainer:9443 |
+
+O proxy encaminha as requisições utilizando o DNS interno da rede Docker.
+
+---
+
+# Variáveis de Ambiente
+
+As configurações sensíveis são armazenadas em um arquivo `.env`.
+
+O repositório disponibiliza apenas:
+
+```text
+.env.example
+```
+
+Cada ambiente deve possuir seu próprio arquivo `.env`.
+
+---
+
+# Histórico da Implantação
+
+A primeira versão do laboratório utilizava containers criados individualmente com `docker run`.
+
+Com a evolução da infraestrutura, todos os serviços foram migrados para Docker Compose, tornando a implantação mais organizada, reproduzível e fácil de manter.
+
+Essa migração também permitiu:
+
+- criação automática da rede Docker;
+- utilização do DNS interno do Docker;
+- simplificação da manutenção;
+- centralização da configuração da infraestrutura.
+
+---
+
+# Estado Atual
+
+- ✅ Docker Compose
+- ✅ Volumes persistentes
+- ✅ Rede Docker dedicada
+- ✅ Reverse Proxy
+- ✅ DNS interno do Docker
+- ✅ Comunicação entre containers
