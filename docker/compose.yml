@@ -16,6 +16,9 @@ services:
       - npm_data:/data
       - npm_letsencrypt:/etc/letsencrypt
 
+    networks:
+      - proxy
+
   homarr:
     image: ghcr.io/homarr-labs/homarr:latest
     container_name: homarr
@@ -32,6 +35,9 @@ services:
       - homarr-appdata:/appdata
       - /var/run/docker.sock:/var/run/docker.sock
 
+    networks:
+      - proxy
+
   uptime-kuma:
     image: louislam/uptime-kuma:1
     container_name: uptime-kuma
@@ -42,6 +48,9 @@ services:
 
     volumes:
       - uptime-kuma:/app/data
+
+    networks:
+      - proxy
 
     extra_hosts:
       - "homarr.lab.local:192.168.0.50"
@@ -62,6 +71,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
 
+    networks:
+      - proxy
+
 volumes:
   npm_data:
     external: true
@@ -73,3 +85,7 @@ volumes:
     external: true
   portainer_data:
     external: true
+
+networks:
+  proxy:
+    driver: bridge
