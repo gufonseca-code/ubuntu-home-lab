@@ -1,46 +1,170 @@
-# Visão Geral do Home Lab
-
-## O que é este laboratório?
-
-Este é um ambiente de laboratório pessoal criado para praticar e documentar habilidades de **infraestrutura** e **suporte técnico**.
-
-O foco principal está em atividades comuns de:
-
-- Suporte Técnico N1 / Service Desk
-- Administração básica de servidores Linux
-- Monitoramento de serviços
-- Redes e configuração de ambiente
-- Documentação de infraestrutura
+# Ubuntu Home Lab – Visão Geral
 
 ## Objetivo
 
-Criar um ambiente prático, estável e bem documentado que demonstre:
+Este projeto documenta a construção de um laboratório doméstico (Home Lab) voltado ao estudo de infraestrutura de TI, virtualização, administração de servidores Linux, redes, containers e monitoramento.
 
-- Capacidade de montar e manter serviços
-- Resolução de problemas reais
-- Organização e documentação técnica
-- Uso de ferramentas comuns em ambientes de TI
+O ambiente foi desenvolvido com foco em aprendizado prático e na aplicação de conceitos utilizados em ambientes corporativos, permitindo experimentar tecnologias em um ambiente controlado e reproduzível.
 
-## Arquitetura atual
+Além da implantação dos serviços, todo o processo de planejamento, configuração, migração e documentação é registrado para demonstrar a evolução da infraestrutura.
 
-| Componente | Detalhe |
-|------------|---------|
-| **Host** | Windows 11 Pro com Hyper-V |
-| **Máquina Virtual** | Ubuntu Server |
-| **Rede** | External Switch + IP estático (`192.168.0.50`) |
-| **Plataforma de containers** | Docker |
-| **Gerenciamento** | Portainer |
-| **Monitoramento** | Uptime Kuma (com alertas no Telegram) |
-| **Dashboard** | Homarr |
+---
 
-## Serviços principais
+# Objetivos de Aprendizagem
+
+O laboratório foi criado para desenvolver experiência prática em:
+
+- Administração de servidores Linux
+- Virtualização com Hyper-V
+- Docker e Docker Compose
+- Redes Docker
+- Reverse Proxy
+- DNS
+- Monitoramento
+- Infraestrutura como Código (IaC)
+- Documentação técnica
+- Troubleshooting
+
+---
+
+# Arquitetura Atual
+
+## Host
+
+- Windows 11 Pro
+- Hyper-V
+
+## Máquina Virtual
+
+- Ubuntu Server
+- IP estático: `192.168.0.50`
+
+## Plataforma de Containers
+
+- Docker
+- Docker Compose
+
+## Rede Docker
+
+- `ubuntu-home-lab_proxy`
+
+Todos os containers compartilham uma rede Docker dedicada e utilizam o DNS interno do Docker para comunicação entre si.
+
+---
+
+# Serviços
 
 | Serviço | Função |
-|---------|--------|
-| Portainer | Gerenciamento de containers Docker |
-| Uptime Kuma | Monitoramento de serviços e notificações |
-| Homarr | Dashboard central com atalhos dos serviços |
+|----------|--------|
+| Homarr | Dashboard central do laboratório |
+| Uptime Kuma | Monitoramento dos serviços |
+| Portainer | Gerenciamento dos containers |
+| Nginx Proxy Manager | Reverse Proxy para acesso por domínios locais |
 
-## Público-alvo desta documentação
+---
 
-Esta documentação foi escrita tanto para meu próprio aprendizado quanto para demonstrar, de forma clara, o processo de construção e manutenção de um ambiente de infraestrutura alinhado a vagas de Suporte Técnico e Analista de TI Júnior.
+# Estado Atual da Infraestrutura
+
+Atualmente o laboratório possui:
+
+- Docker Compose para gerenciamento da infraestrutura
+- Rede Docker dedicada
+- Comunicação entre containers utilizando DNS interno do Docker
+- Reverse Proxy com Nginx Proxy Manager
+- Monitoramento utilizando Uptime Kuma
+- Dashboard centralizado com Homarr
+- Volumes persistentes para todos os serviços
+
+Toda a infraestrutura pode ser recriada utilizando um único comando:
+
+```bash
+docker compose up -d
+```
+
+---
+
+# Marcos do Projeto
+
+## Fase 1 — Monitoramento
+
+- ✅ Implantação do Uptime Kuma
+- ✅ Resolução do problema de DNS do container
+- ✅ Migração dos monitores para utilização dos domínios locais
+
+---
+
+## Fase 2 — Organização da Infraestrutura
+
+- ✅ Migração de todos os serviços para Docker Compose
+- ✅ Criação da rede Docker dedicada (`ubuntu-home-lab_proxy`)
+- ✅ Comunicação entre containers utilizando DNS interno do Docker
+- ✅ Migração do Nginx Proxy Manager para utilizar nomes dos containers
+
+---
+
+## Próximos Marcos
+
+### Fase 3 — Infraestrutura de Rede
+
+- Implantação de DNS local
+- Remoção dos arquivos `hosts`
+- Configuração do roteador para utilizar o DNS interno
+
+### Fase 4 — HTTPS
+
+- Certificados SSL
+- Redirecionamento HTTP → HTTPS
+- Renovação automática
+
+### Fase 5 — Monitoramento
+
+- Monitoramento do host Ubuntu
+- Monitoramento de Docker
+- Monitoramento da rede
+- Monitoramento do gateway
+
+### Fase 6 — Expansão
+
+- Grafana
+- Prometheus
+- Gitea
+- Vaultwarden
+- Nextcloud
+- Paperless-ngx
+
+### Fase 7 — Documentação Final
+
+- Diagramas da arquitetura
+- Fluxo de DNS
+- Fluxo do Reverse Proxy
+- Estratégia de backup
+- Procedimento de recuperação do ambiente
+
+---
+
+# Estrutura da Documentação
+
+| Documento | Descrição |
+|------------|-----------|
+| 01-overview.md | Visão geral do projeto |
+| 02-hardware-vm.md | Infraestrutura física e virtual |
+| 03-network.md | Configuração de rede |
+| 04-services.md | Serviços implantados |
+| 08-lessons-learned.md | Problemas encontrados e soluções |
+
+---
+
+# Situação Atual
+
+```
+[x] Infraestrutura virtualizada
+[x] Docker
+[x] Docker Compose
+[x] Rede Docker dedicada
+[x] Reverse Proxy
+[x] Monitoramento
+[ ] DNS Local
+[ ] HTTPS
+[ ] Monitoramento avançado
+[ ] Expansão dos serviços
+```
