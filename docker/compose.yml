@@ -52,11 +52,6 @@ services:
     networks:
       - proxy
 
-    extra_hosts:
-      - "homarr.lab.local:192.168.0.50"
-      - "uptime.lab.local:192.168.0.50"
-      - "portainer.lab.local:192.168.0.50"
-      - "npm.lab.local:192.168.0.50"
 
   portainer:
     image: portainer/portainer-ce:latest
@@ -74,6 +69,23 @@ services:
     networks:
       - proxy
 
+  adguardhome:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "3000:80/tcp"
+
+    volumes:
+      - adguard_work:/opt/adguardhome/work
+      - adguard_conf:/opt/adguardhome/conf
+
+    networks:
+      - proxy
+
 volumes:
   npm_data:
     external: true
@@ -85,6 +97,8 @@ volumes:
     external: true
   portainer_data:
     external: true
+  adguard_work:
+  adguard_conf:
 
 networks:
   proxy:
