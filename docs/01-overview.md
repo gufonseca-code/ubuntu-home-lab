@@ -50,6 +50,10 @@ O laboratório foi criado para desenvolver experiência prática em:
 
 Todos os containers compartilham uma rede Docker dedicada e utilizam o DNS interno do Docker para comunicação entre si.
 
+## DNS Local
+
+- AdGuard Home (resolução de `*.lab.local` → `192.168.0.50`)
+
 ---
 
 # Serviços
@@ -60,6 +64,7 @@ Todos os containers compartilham uma rede Docker dedicada e utilizam o DNS inter
 | Uptime Kuma | Monitoramento dos serviços |
 | Portainer | Gerenciamento dos containers |
 | Nginx Proxy Manager | Reverse Proxy para acesso por domínios locais |
+| AdGuard Home | Servidor DNS local |
 
 ---
 
@@ -73,6 +78,7 @@ Atualmente o laboratório possui:
 - Reverse Proxy com Nginx Proxy Manager
 - Monitoramento utilizando Uptime Kuma
 - Dashboard centralizado com Homarr
+- DNS local com AdGuard Home
 - Volumes persistentes para todos os serviços
 
 Toda a infraestrutura pode ser recriada utilizando um único comando:
@@ -102,13 +108,15 @@ docker compose up -d
 
 ---
 
+## Fase 3 — Infraestrutura de Rede
+
+- ✅ Implantação de DNS local (AdGuard Home)
+- ✅ Remoção das entradas do arquivo `hosts`
+- ✅ Remoção do `extra_hosts` do Uptime Kuma
+
+---
+
 ## Próximos Marcos
-
-### Fase 3 — Infraestrutura de Rede
-
-- Implantação de DNS local
-- Remoção dos arquivos `hosts`
-- Configuração do roteador para utilizar o DNS interno
 
 ### Fase 4 — HTTPS
 
@@ -163,7 +171,7 @@ docker compose up -d
 [x] Rede Docker dedicada
 [x] Reverse Proxy
 [x] Monitoramento
-[ ] DNS Local
+[x] DNS Local
 [ ] HTTPS
 [ ] Monitoramento avançado
 [ ] Expansão dos serviços

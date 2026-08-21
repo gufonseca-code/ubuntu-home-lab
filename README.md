@@ -15,6 +15,7 @@ O objetivo deste projeto é construir um ambiente semelhante ao encontrado em am
 - Homarr
 - Uptime Kuma
 - Portainer
+- AdGuard Home
 
 ---
 
@@ -23,15 +24,20 @@ O objetivo deste projeto é construir um ambiente semelhante ao encontrado em am
 Internet / LAN
 │
 ▼
+AdGuard Home (DNS local)
+│
+▼
 Nginx Proxy Manager
 │
 ▼
 Docker Network (proxy)
 ├── Homarr
 ├── Uptime Kuma
-└── Portainer
+├── Portainer
+└── AdGuard Home
 
 Os serviços se comunicam utilizando o DNS interno do Docker, eliminando dependência de endereços IP entre containers.
+Os domínios `*.lab.local` são resolvidos pelo AdGuard Home para o IP da máquina virtual.
 
 ---
 
@@ -56,6 +62,7 @@ README.md
 | Uptime Kuma | 3001 | uptime.lab.local |
 | Portainer | 9443 | portainer.lab.local |
 | Nginx Proxy Manager | 81 | npm.lab.local |
+| AdGuard Home | 53 / 3000 | adguard.lab.local |
 
 ---
 
@@ -74,9 +81,9 @@ README.md
 
 ### Fase 3 — Infraestrutura de Rede
 
-- [ ] Implantar DNS local
-- [ ] Remover arquivos hosts
-- [ ] Configurar roteador para utilizar o DNS
+- [x] Implantar DNS local (AdGuard Home)
+- [x] Remover arquivos hosts
+- [x] Configurar clientes para utilizar o DNS
 
 ### Fase 4 — HTTPS
 

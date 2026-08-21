@@ -27,19 +27,21 @@ ubuntu-home-lab_proxy
       │
  ├── Homarr
  ├── Uptime Kuma
- └── Portainer
+ ├── Portainer
+ └── AdGuard Home
 ```
 
 ---
 
 # Serviços Implantados
 
-| Serviço | Função | Porta Interna | Domínio |
-|----------|---------|--------------:|---------|
-| Homarr | Dashboard do laboratório | 7575 | homarr.lab.local |
-| Uptime Kuma | Monitoramento | 3001 | uptime.lab.local |
-| Portainer | Gerenciamento Docker | 9443 | portainer.lab.local |
-| Nginx Proxy Manager | Reverse Proxy | 80 / 81 / 443 | npm.lab.local |
+| Serviço              | Função                    | Porta Interna | Domínio / Acesso          |
+|----------------------|---------------------------|---------------|---------------------------|
+| Homarr               | Dashboard do laboratório  | 7575          | homarr.lab.local          |
+| Uptime Kuma          | Monitoramento             | 3001          | uptime.lab.local          |
+| Portainer            | Gerenciamento Docker      | 9443          | portainer.lab.local       |
+| Nginx Proxy Manager  | Reverse Proxy             | 80 / 81 / 443 | npm.lab.local             |
+| AdGuard Home         | DNS local                 | 53 / 80       | adguard.lab.local (:3000) |
 
 ---
 
@@ -94,6 +96,8 @@ Exemplos:
 - npm_data
 - npm_letsencrypt
 - portainer_data
+- adguard_work
+- adguard_conf
 
 Isso garante que os dados permaneçam preservados mesmo após recriar os containers.
 
@@ -112,6 +116,51 @@ Mapeamentos atuais:
 | portainer.lab.local | portainer:9443 |
 
 O proxy encaminha as requisições utilizando o DNS interno da rede Docker.
+
+---
+
+# AdGuard Home
+
+O AdGuard Home atua como servidor DNS local da rede do laboratório.
+
+## Função
+
+- Resolver os domínios `*.lab.local` para o IP da máquina virtual (`192.168.0.50`)
+- Eliminar a dependência do arquivo `hosts`
+- Permitir que qualquer dispositivo da rede resolva os serviços do laboratório automaticamente
+
+## Implantação
+
+O serviço é executado em container Docker e gerenciado pelo Docker Compose.
+
+Portas publicadas:
+
+| Porta do host | Destino no container | Uso                    |
+|---------------|----------------------|------------------------|
+| 53/tcp        | 53/tcp               | DNS                    |
+| 53/udp        | 53/udp               | DNS                    |
+| 3000/tcp      | 80/tcp               | Interface web          |
+
+## Observação sobre a porta da interface web
+
+Após o setup inicial, o AdGuard Home passa a servir a interface administrativa na porta **80** do container.
+
+Como a porta 80 do host já é utilizada pelo Nginx Proxy Manager, a interface web foi mapeada para a porta **3000** do host:
+
+```text
+3000:80
+```
+
+## Volumes
+
+- `adguard_work` → dados de trabalho
+- `adguard_conf` → configuração
+
+## Estado
+
+- ✅ Implantado
+- ✅ DNS Rewrites configurados
+- ✅ Dependência do arquivo `hosts` removida
 
 ---
 
@@ -142,6 +191,8 @@ Essa migração também permitiu:
 - simplificação da manutenção;
 - centralização da configuração da infraestrutura.
 
+Posteriormente foi adicionado o AdGuard Home como servidor DNS local, eliminando a dependência do arquivo `hosts` e do `extra_hosts` no Uptime Kuma.
+
 ---
 
 # Estado Atual
@@ -152,3 +203,4 @@ Essa migração também permitiu:
 - ✅ Reverse Proxy
 - ✅ DNS interno do Docker
 - ✅ Comunicação entre containers
+- ✅ DNS local (AdGuard Home)

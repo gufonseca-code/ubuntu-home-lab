@@ -12,6 +12,7 @@ Atualmente, o ambiente utiliza:
 - Rede Docker dedicada
 - Nginx Proxy Manager como Reverse Proxy
 - Comunicação entre containers utilizando o DNS interno do Docker
+- AdGuard Home como servidor DNS local
 
 ---
 
@@ -71,7 +72,9 @@ sudo netplan apply
 
 # Resolução de Nomes
 
-Durante o desenvolvimento inicial do laboratório, foi utilizado o arquivo `hosts` para resolver os domínios locais.
+## Situação anterior
+
+Durante o desenvolvimento inicial do laboratório, a resolução dos domínios locais era feita através do arquivo `hosts` em cada cliente.
 
 Exemplo:
 
@@ -82,7 +85,51 @@ Exemplo:
 192.168.0.50 npm.lab.local
 ```
 
-Essa abordagem permitiu validar o funcionamento do Reverse Proxy antes da implantação de um servidor DNS dedicado.
+Essa abordagem permitiu validar o funcionamento do Reverse Proxy antes da implantação de um servidor DNS dedicado. Também foi necessário utilizar `extra_hosts` no container do Uptime Kuma para que ele conseguisse resolver os domínios locais.
+
+## Situação atual — DNS Local
+
+Foi implantado o **AdGuard Home** como servidor DNS local da rede.
+
+Todos os domínios `*.lab.local` são resolvidos para o endereço da máquina virtual:
+
+```text
+192.168.0.50
+```
+
+### Registros configurados (DNS Rewrites)
+
+| Domínio                 | Resposta       |
+|-------------------------|----------------|
+| homarr.lab.local        | 192.168.0.50   |
+| uptime.lab.local        | 192.168.0.50   |
+| portainer.lab.local     | 192.168.0.50   |
+| npm.lab.local           | 192.168.0.50   |
+| adguard.lab.local       | 192.168.0.50   |
+
+Com essa configuração:
+
+- Não é mais necessário editar o arquivo `hosts` nos clientes
+- O bloco `extra_hosts` do Uptime Kuma foi removido
+- Qualquer dispositivo que utilize o AdGuard Home como DNS passa a resolver os domínios do laboratório automaticamente
+
+### Acesso à interface do AdGuard Home
+
+- Endereço: `http://192.168.0.50:3000`
+- (Opcional) Pode ser publicado via Nginx Proxy Manager em `adguard.lab.local`
+
+### Configuração de clientes
+
+Os dispositivos da rede devem utilizar o AdGuard Home como servidor DNS:
+
+```text
+DNS primário: 192.168.0.50
+```
+
+Isso pode ser feito:
+
+- Manualmente em cada dispositivo, ou
+- Centralmente no roteador (DHCP), apontando o DNS do gateway para `192.168.0.50`
 
 ---
 
@@ -98,6 +145,7 @@ Domínios configurados:
 | uptime.lab.local | Uptime Kuma |
 | portainer.lab.local | Portainer |
 | npm.lab.local | Nginx Proxy Manager |
+| adguard.lab.local | AdGuard Home (opcional) |
 
 Com essa configuração, os usuários acessam os serviços utilizando nomes amigáveis, sem precisar informar portas específicas.
 
@@ -133,7 +181,7 @@ O Nginx Proxy Manager utiliza esses nomes para encaminhar as requisições aos s
 Cliente
       │
       ▼
-homarr.lab.local
+homarr.lab.local  (resolvido pelo AdGuard Home → 192.168.0.50)
       │
       ▼
 192.168.0.50
@@ -146,22 +194,9 @@ ubuntu-home-lab_proxy
       │
  ├── homarr
  ├── uptime-kuma
- └── portainer
+ ├── portainer
+ └── adguardhome
 ```
-
----
-
-# Próximos Passos
-
-A próxima etapa da evolução da infraestrutura será a implantação de um servidor DNS local.
-
-Objetivos:
-
-- eliminar a dependência do arquivo `hosts`;
-- distribuir os domínios automaticamente para todos os dispositivos da rede;
-- simplificar a administração dos serviços.
-
-Após essa implantação, os registros DNS passarão a substituir completamente as entradas manuais atualmente utilizadas.
 
 ---
 
@@ -173,7 +208,8 @@ Após essa implantação, os registros DNS passarão a substituir completamente 
 - ✅ Rede Docker dedicada
 - ✅ DNS interno do Docker
 - ✅ Reverse Proxy
-- ⏳ DNS local (planejado)
+- ✅ DNS local (AdGuard Home)
+- ⏳ HTTPS (planejado)
 
 ---
 

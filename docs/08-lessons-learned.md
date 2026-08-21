@@ -162,6 +162,47 @@ O uso de um Reverse Proxy torna a infraestrutura mais organizada, facilita futur
 
 ---
 
+# AdGuard Home
+
+## Conflito de porta da interface web
+
+### Problema
+
+Após concluir o setup inicial do AdGuard Home, a interface administrativa não respondia mais na porta 3000.
+
+Os acessos a `http://192.168.0.50` e `http://192.168.0.50:80` abriam a página padrão do Nginx Proxy Manager. A porta 3000 retornava erro de página não encontrada.
+
+### Causa
+
+Durante o primeiro start, o AdGuard Home utiliza a porta 3000 para o assistente de instalação.
+Após a conclusão do setup, a interface web passa a escutar na porta **80** dentro do container.
+
+No `compose.yml` original, apenas a porta 3000 estava publicada. A porta 80 do container não estava mapeada para o host. Além disso, a porta 80 do host já era utilizada pelo Nginx Proxy Manager.
+
+### Solução
+
+O mapeamento de portas foi alterado para:
+
+```yaml
+ports:
+  - "53:53/tcp"
+  - "53:53/udp"
+  - "3000:80/tcp"
+```
+
+Com isso, a interface web do AdGuard Home ficou acessível em:
+
+```text
+http://192.168.0.50:3000
+```
+
+### Aprendizado
+
+Serviços que alteram a porta da interface administrativa após o setup inicial exigem atenção especial no mapeamento de portas.
+Quando a porta 80 do host já está ocupada (como no caso do Nginx Proxy Manager), é necessário publicar a interface em uma porta alternativa ou expor o serviço através do próprio Reverse Proxy.
+
+---
+
 # Documentação
 
 ## Documentar durante o desenvolvimento
@@ -184,7 +225,6 @@ Documentar continuamente é mais eficiente do que tentar reconstruir o históric
 
 As próximas etapas do projeto deverão introduzir novos conceitos, incluindo:
 
-- DNS local
 - HTTPS
 - Certificados SSL
 - Monitoramento de infraestrutura
